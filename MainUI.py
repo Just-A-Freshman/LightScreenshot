@@ -294,6 +294,7 @@ class SettingUI(object):
     
     def update_parent_attr(self):
         orig_width, orig_height = self.parent.geometry().split("x")
+        orig_height = orig_height.split("+")[0]
         self.parent.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT * 8}")
         self.parent.resizable(False, False)
         self.parent.unbind_keyboard_event()
