@@ -33,17 +33,14 @@ class FlatButton(tk.Label):
         self.bind("<ButtonRelease-1>", self.__command)
  
     def __command(self, event):
-        # try:
-        #     if self.cget("fg") in (self.__enter_fg, self.__click_fg):
-        #         self.command(event)
-        #     self.config(fg=self.__fg)
-        # except tk.TclError:
-        #     pass
-        # except TypeError:
-        #     self.config(fg=self.__fg)
-        if self.cget("fg") in (self.__enter_fg, self.__click_fg):
-            self.command(event)
-        self.config(fg=self.__fg)
+        try:
+            if self.cget("fg") in (self.__enter_fg, self.__click_fg):
+                self.command(event)
+            self.config(fg=self.__fg)
+        except tk.TclError:
+            pass
+        except TypeError:
+            self.config(fg=self.__fg)
 
  
 
@@ -244,8 +241,9 @@ class AutoScrollbar(ttk.Scrollbar):
     def place(self, **kw):
         raise tk.TclError('Cannot use place with the widget ' + self.__class__.__name__)
 
+
 class CanvasImage:
-    delta = 1.1
+    delta = 1.2
     filter = Image.Resampling.LANCZOS
     huge_size = 14000  # define size of the huge image
     band_width = 1024
@@ -328,6 +326,9 @@ class CanvasImage:
 
     def bind_event(self):
         """ Bind event to the CanvasImage """
+        self.canvas.bind('<Configure>', lambda _: self.__show_image())  # handle window resize event
+        self.canvas.bind('<ButtonPress-1>', self.__move_from)  # remember canvas position
+        self.canvas.bind('<B1-Motion>',     self.__move_to)  # move canvas to the new position
         self.canvas.bind('<ButtonPress-1>', self.__move_from)  # remember canvas position
         self.canvas.bind('<B1-Motion>',     self.__move_to)  # move canvas to the new position
         self.canvas.bind('<MouseWheel>', self.__wheel)  # zoom for Windows and MacOS, but not Linux
