@@ -406,12 +406,15 @@ class CanvasImage:
 
     def show_image(self, width, height):
         # This is for show image quickly. when user try to scroll or zoom, then __show_image will be called.
-        self.fit_to_size(width, height)
-        image: Image.Image = self.__raw_image.copy()
-        image.thumbnail((width, height), Image.Resampling.NEAREST)
-        imagetk = ImageTk.PhotoImage(image)
-        self.canvas.create_image(0, 0, anchor='nw', image=imagetk)
-        self.canvas.imagetk = imagetk
+        try:
+            self.fit_to_size(width, height)
+            image: Image.Image = self.__raw_image.copy()
+            image.thumbnail((width, height), Image.Resampling.NEAREST)
+            imagetk = ImageTk.PhotoImage(image)
+            self.canvas.create_image(0, 0, anchor='nw', image=imagetk)
+            self.canvas.imagetk = imagetk
+        except AttributeError:
+            self.__show_image()
 
     def __show_image(self):
         """ Show image on the Canvas. Implements correct image zoom almost like in Google Maps """
