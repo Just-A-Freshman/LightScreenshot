@@ -6,8 +6,13 @@
 - Page Through Screenshots: Quickly view different screenshots by flipping through them.
 - Delete Images from View: Remove images from the view without affecting the original files on disk; only the in-memory image reference is deleted.
 - Always-On-Top Window: Keep the window always on top, ensuring it is not obscured by other windows. This is convenient for placing screenshots on the side for reference.
-- Settings Options: Customize settings, including shortcuts and options for automatic copy/save.
+- Settings Options: Customize settings, including shortcuts and options for automatic copy/save/delete.
 - Optimized Canvas Zoom: Enhanced canvas zoom functionality with efficient size adjustment and support for mouse wheel operations.
+
+## limitation
+- Only compatible with Windows operating systems.
+- Currently supports one language: Chinese.
+- The screenshot cannot be edited; you can only capture the image as it appears on the screen.
 
 ## The UI image:
 ### The Main UI:
