@@ -298,7 +298,7 @@ class MainWindow(ttk.Frame):
         canvas = CanvasImage(self.master, path)  # create widget
         canvas.grid(row=0, column=0)  # show widget
 
-filename  = r"D:\Users\pbl\Desktop\superFolder\望梅止渴之经典12炮.png"  # place path to your image here
+# place path to your image here
 #filename = 'd:/Data/yandex_z18_1-1.tif'  # huge TIFF file 1.4 GB
 #filename = 'd:/Data/The_Garden_of_Earthly_Delights_by_Bosch_High_Resolution.jpg'
 #filename = 'd:/Data/The_Garden_of_Earthly_Delights_by_Bosch_High_Resolution.tif'
