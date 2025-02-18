@@ -165,7 +165,8 @@ class MainUI(tk.Tk):
 
 class SettingUI(object):
     def __init__(self, parent: 'ScreenshotTool'):
-        self.parent = parent
+        self.parent: 'ScreenshotTool' = parent
+        self.window_id: int = 0
         self.orig_pos: tuple[int, int] = self.update_parent_attr()
         self.basic_frame: tk.Frame = self.set_basic_frame()
         self.inner_frame: tk.Frame = self.set_inner_scrollable_frame()
@@ -180,9 +181,11 @@ class SettingUI(object):
         self.exit_entry_edit_btn: FlatButton = self.set_exit_entry_edit_btn()
         self.auto_copy_var: tk.BooleanVar = self.set_auto_copy_checkbox()
         self.auto_save_var: tk.BooleanVar = self.set_auto_save_checkbox()
+        self.auto_delete_var: tk.BooleanVar = self.set_auto_delete_checkbox()
         self.auto_save_path_entry: tk.Entry = self.set_auto_save_path_entry()
         self.browse_auto_save_path_btn: FlatButton = self.set_browse_auto_save_path_btn()
         self.open_auto_save_path_btn: FlatButton = self.set_open_auto_save_path_btn()
+        self.auto_delete_spinbox: tk.Spinbox = self.set_auto_delete_spinbox()
         self.update_scrollbar()
 
     def set_basic_frame(self) -> tk.Frame:
@@ -194,12 +197,10 @@ class SettingUI(object):
         self.basic_canvas = tk.Canvas(self.basic_frame, highlightthickness=0)
         scrollbar = tk.Scrollbar(self.basic_frame, command=self.basic_canvas.yview, width=40)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.basic_canvas.pack(side=tk.TOP, fill=tk.BOTH)
+        self.basic_canvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.basic_canvas.configure(yscrollcommand=scrollbar.set)
         inner_frame = tk.Frame(self.basic_canvas, bg=Style.bg2, highlightthickness=0)
-        self.basic_frame.update()
-        self.basic_canvas.create_window((0, 0), window=inner_frame, anchor='nw', width=WINDOW_WIDTH - 40)
-        self.basic_frame.bind_all("<MouseWheel>", lambda e: self.basic_canvas.yview_scroll(-1 * (e.delta // 120), "units"))
+        self.window_id = self.basic_canvas.create_window((0, 0), window=inner_frame, anchor='nw', width=self.orig_pos[0] - 40)
         return inner_frame
 
     def set_back_btn(self):
@@ -211,12 +212,12 @@ class SettingUI(object):
 
     def set_shortcut_labelframe(self) -> tk.LabelFrame:
         frame = tk.LabelFrame(self.inner_frame, text="快捷方式", font=Style.head1, bg=Style.bg2, borderwidth=4)
-        frame.pack(padx=10, pady=(60, 20), side=tk.TOP, fill=tk.X)
+        frame.pack(padx=10, pady=(60, 20), side=tk.TOP, fill=tk.X, expand=True)
         return frame
 
     def set_auto_operation_labelframe(self) -> tk.LabelFrame:
         frame = tk.LabelFrame(self.inner_frame, text="自动操作", font=Style.head1, bg=Style.bg2, borderwidth=4)
-        frame.pack(padx=10, side=tk.TOP, fill=tk.X)
+        frame.pack(padx=10, side=tk.TOP, fill=tk.X, expand=True)
         return frame
 
     def set_capture_shortcuts_entry(self) -> ttk.Entry:
@@ -268,19 +269,37 @@ class SettingUI(object):
 
     def set_auto_save_checkbox(self) -> tk.BooleanVar:
         tip_label = tk.Label(self.auto_operation_labelframe, text="自动保存截图", font=Style.head2)
-        tip_label.grid(row=1, column=0, sticky=tk.W, ipady=5, pady=15)
+        tip_label.grid(row=1, column=0, sticky=tk.W, ipady=5, pady=(15, 0))
         auto_save_var = tk.BooleanVar(value=True)
         check_btn = ttk.Checkbutton(self.auto_operation_labelframe, variable=auto_save_var)
-        check_btn.grid(row=1, column=1, pady=15)
+        check_btn.grid(row=1, column=1, pady=(15, 0))
         return auto_save_var
 
     def set_auto_save_path_entry(self) -> ttk.Entry:
         auto_save_path_entry = ttk.Entry(self.auto_operation_labelframe)
-        auto_save_path_entry.grid(row=4, column=0, sticky=tk.W + tk.E, pady=(5, 10), ipady=5, padx=5)
+        auto_save_path_entry.grid(row=4, column=0, sticky=tk.W + tk.E, pady=5, ipady=5, padx=5)
         auto_save_path_entry.config(state="readonly")
         self.auto_operation_labelframe.columnconfigure(0, weight=1)
         self.auto_operation_labelframe.columnconfigure(1, weight=0)
         return auto_save_path_entry
+    
+    def set_auto_delete_checkbox(self) -> tk.BooleanVar:
+        tip_label = tk.Label(self.auto_operation_labelframe, text="自动删除截图", font=Style.head2)
+        tip_label.grid(row=5, column=0, sticky=tk.W, ipady=5, pady=(25, 0))
+        auto_delete_var = tk.BooleanVar(value=True)
+        check_btn = ttk.Checkbutton(self.auto_operation_labelframe, variable=auto_delete_var)
+        check_btn.grid(row=5, column=1, pady=(25, 0))
+        return auto_delete_var
+    
+    def set_auto_delete_spinbox(self) -> ttk.Spinbox:
+        tip_label = tk.Label(self.auto_operation_labelframe, text="截图数上限, 超过自动删首图", font=Style.head3)
+        tip_label.grid(row=6, column=0, sticky=tk.W, pady=0)
+        auto_delete_spinbox = tk.Spinbox(
+            self.auto_operation_labelframe, values=list(range(3, 31)), width=2,
+            state="readonly", bd=0
+        )
+        auto_delete_spinbox.grid(row=6, column=1, pady=0)
+        return auto_delete_spinbox
     
     def set_browse_auto_save_path_btn(self) -> FlatButton:
         browse_btn = FlatButton(self.auto_operation_labelframe, text="更改")
@@ -292,15 +311,15 @@ class SettingUI(object):
         open_btn.grid(row=4, column=2, sticky=tk.E, pady=(5, 10), ipady=5)
         return open_btn
     
-    def update_parent_attr(self):
-        orig_width, orig_height = self.parent.geometry().split("x")
-        orig_height = orig_height.split("+")[0]
-        self.parent.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT * 8}")
-        self.parent.resizable(False, False)
+    def update_parent_attr(self) -> tuple[int, int]:
+        window_width, window_height = self.parent.geometry().split("x")
+        window_height = window_height.split("+")[0]
+        setting_window_height = WINDOW_HEIGHT * 8 if int(window_height) < WINDOW_HEIGHT * 8 else window_height
+        self.parent.geometry(f"{window_width}x{setting_window_height}")
         self.parent.unbind_keyboard_event()
         style = Style()
         style.set_checkbox_style()
-        return orig_width, orig_height
+        return int(window_width), int(window_height)
     
     def update_scrollbar(self):
         self.basic_frame.update()

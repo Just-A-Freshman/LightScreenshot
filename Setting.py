@@ -14,24 +14,29 @@ class Env(object):
         self.capture_shortcuts: list = []
         self.call_shortcuts: list = []
         self.exit_shortcuts: list = []
+        self.auto_copy: bool = None
         self.auto_save: bool = None
         self.auto_save_path: str = None
-        self.auto_copy: bool = None
+        self.auto_delete: bool = None
+        self.auto_delete_upper: int = None
+        self.load_from_file()
         for key, value in self.load_from_file().items():
             setattr(self, key, value)
 
     def load_from_file(self):
         try:
-            with open("settings.json", "r") as file:
+            with open(SETTING_FILE, "r", encoding="utf-8") as file:
                 return json.load(file)
         except (FileNotFoundError, json.JSONDecodeError):
             return {
                 "capture_shortcuts": ["Alt", "A"],
                 "call_shortcuts": ["Alt", "S"],
-                "exit_shortcuts": ["Alt", "Enter"],
+                "exit_shortcuts": ["Alt", "Return"],
+                "auto_copy": True,
                 "auto_save": False,
                 "auto_save_path": "",
-                "auto_copy": True
+                "auto_delete": False,
+                "auto_delete_upper": 10
             }
         
     def load_from_self(self):
@@ -39,19 +44,22 @@ class Env(object):
             "capture_shortcuts": self.capture_shortcuts,
             "call_shortcuts": self.call_shortcuts,
             "exit_shortcuts": self.exit_shortcuts,
+            "auto_copy": self.auto_copy,
             "auto_save": self.auto_save,
             "auto_save_path": self.auto_save_path,
-            "auto_copy": self.auto_copy
+            "auto_delete": self.auto_delete,
+            "auto_delete_upper": self.auto_delete_upper
         }
     
     def save_to_file(self):
-        with open("settings.json", "w") as file:
+        with open(SETTING_FILE, "w", encoding="utf-8") as file:
             json.dump(self.load_from_self(), file, indent=4, ensure_ascii=False)
             
 
 class Style(object):
     head1 = ("微软雅黑", 15)
     head2 = ("微软雅黑", 12)
+    head3 = ("微软雅黑", 9)
     bg1 = "#FFFFFF"
     bg2 = "#F3F3F3"
     bg3 = "#202020"
@@ -96,6 +104,7 @@ KEYS_TRANSFORM = {
     "Win_L": "Win", "Win_R": "Win"
 }
 
+SETTING_FILE = os.path.join("Setting", "settings.json")
 SCREEN_WIDTH = user32.GetSystemMetrics(0)
 SCREEN_HEIGHT = user32.GetSystemMetrics(1)
 WINDOW_WIDTH = TkS(280)

@@ -1,0 +1,19 @@
+{
+    "capture_shortcuts": [
+        "Alt",
+        "A"
+    ],
+    "call_shortcuts": [
+        "Alt",
+        "Q"
+    ],
+    "exit_shortcuts": [
+        "Alt",
+        "Return"
+    ],
+    "auto_copy": true,
+    "auto_save": true,
+    "auto_save_path": "D:/Users/pbl/Desktop/superFolder/input",
+    "auto_delete": true,
+    "auto_delete_upper": 3
+}

@@ -1,5 +1,6 @@
 from PIL import Image
 from Setting import SCREEN_WIDTH, SCREEN_HEIGHT, TkS
+from collections import deque
 
 
 class Event(object):
@@ -28,7 +29,7 @@ class ScreenshotUtils(object):
         self.page_index: int = 0
         self.current_image: Image.Image = None
         self.pixel_reader = None
-        self.final_images: list[Image.Image] = list()
+        self.final_images: deque[Image.Image] = deque([])
         # 这种是只移动但不改变大小和内容的控件，只需移动无需重绘
         self.screenshot_move_widget = list()
         # 这种是移动和改变大小的控件，需要实时重绘

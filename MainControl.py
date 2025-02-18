@@ -19,8 +19,8 @@ class ScreenshotTool(MainUI):
     def __init__(self):
         super().__init__()
         self.env = Env()
-        self.add_command()
-        self.add_keyboard_event()
+        Thread(target=self.add_command).start()
+        Thread(target=self.add_keyboard_event).start()
 
     def add_command(self):
         self.cut_btn.command = self.start_capture
@@ -180,14 +180,11 @@ class ScreenshotTool(MainUI):
         self.screenshot.final_images.append(image)
         self.show_image_canvas.show_image(image)
         self.screenshot.page_index = len(self.screenshot.final_images) - 1
-        if self.env.auto_copy:
-            self.copy_image(event)
-        if self.env.auto_save:
-            self.save_image(False)
+        self.auto_operation(event)
         self.attributes('-topmost', 1)
         keyboard.remove_hotkey(self.env.shortcuts_id[2])
 
-    def load_image(self, _) -> None:
+    def load_image(self, event) -> None:
         file_types = (("Image files", "*.jpg *.png *.jpeg"), )
         img_path = filedialog.askopenfilename(filetypes=file_types)
         if not img_path:
@@ -201,6 +198,7 @@ class ScreenshotTool(MainUI):
         self.show_image_canvas.show_image(image)
         self.screenshot.final_images.append(image)
         self.screenshot.page_index = len(self.screenshot.final_images) - 1
+        self.auto_operation(event)
 
     def copy_image(self, _) -> None:
         def __copy_image():
@@ -256,7 +254,7 @@ class ScreenshotTool(MainUI):
             return messagebox.showinfo("提示", "暂无图片可删除!")
         if not messagebox.askokcancel("提示", "确认删除当前图片?"):
             return
-        self.screenshot.final_images.pop(self.screenshot.page_index)
+        self.screenshot.final_images.pop()
         if self.screenshot.page_index == len(self.screenshot.final_images):
             self.screenshot.page_index -= 1
         if len(self.screenshot.final_images) == 0:
@@ -272,7 +270,15 @@ class ScreenshotTool(MainUI):
             self.deiconify()
         else:
             self.iconify()
-       
+
+    def auto_operation(self, event):
+        if self.env.auto_copy:
+            self.copy_image(event)
+        if self.env.auto_save:
+            self.save_image(False)
+        if self.env.auto_delete and len(self.screenshot.final_images) > self.env.auto_delete_upper:
+            self.screenshot.final_images.popleft()
+            self.screenshot.page_index -= 1
 
 
 class SettingControl(SettingUI):
@@ -280,20 +286,40 @@ class SettingControl(SettingUI):
         super().__init__(master)
         self.master: ScreenshotTool = master
         self.env: Env = env
-        self.bind_command()
-        self.load_setting_to_widget()
+        Thread(target=self.bind_command).start()
+        self.parent.after(100, self.load_setting_to_widget)
 
     def bind_command(self):
         def __bind_rel_command(entry, edit_btn):
             entry.bind("<FocusOut>", lambda e: e.widget.config(state="readonly"))
             entry.bind("<Key>", self.edit_entry)
             edit_btn.command = lambda _: self.active_entry(entry)
+        self.basic_canvas.bind("<Configure>", self.update_window_size)
+        self.basic_frame.bind_all("<MouseWheel>", self.on_mouse_wheel)
         __bind_rel_command(self.capture_shortcuts_entry, self.capture_entry_edit_btn)
         __bind_rel_command(self.call_shortcuts_entry, self.call_entry_edit_btn)
         __bind_rel_command(self.exit_shortcut_entry, self.exit_entry_edit_btn)
         self.back_btn.command = lambda _: self.save_setting()
         self.browse_auto_save_path_btn.command = self.browse_auto_save_path
         self.open_auto_save_path_btn.command = self.open_auto_save_path
+
+    def update_window_size(self, event):
+        # 动态更新窗口宽度
+        new_width = event.width - 40
+        self.basic_canvas.itemconfig(self.window_id, width=new_width)
+
+    def on_mouse_wheel(self, event):
+        # 获取窗口高度和框架高度
+        canvas_height = self.basic_canvas.winfo_height()
+        bbox = self.basic_canvas.bbox("all")
+        if bbox:
+            frame_height = bbox[3] - bbox[1]
+            # 如果窗口高度大于框架高度，阻止滚动
+            if canvas_height > frame_height:
+                return "break"
+            # 正常处理滚动事件
+            self.basic_canvas.yview_scroll(-1 * (event.delta // 120), "units")
+        return
 
     def insert_into_entry(self, entry: ttk.Entry, text: str = "") -> None:
         entry.config(state="active")
@@ -311,26 +337,33 @@ class SettingControl(SettingUI):
         self.insert_into_entry(self.call_shortcuts_entry, " + ".join(self.env.call_shortcuts))
         self.insert_into_entry(self.exit_shortcut_entry, " + ".join(self.env.exit_shortcuts))
         self.insert_into_entry(self.auto_save_path_entry, self.env.auto_save_path)
+        self.auto_delete_spinbox.insert(0, self.env.auto_delete_upper)
         self.auto_save_var.set(self.env.auto_save)
         self.auto_copy_var.set(self.env.auto_copy)
+        self.auto_delete_var.set(self.env.auto_delete)
 
     def save_setting(self):
-        self.env.capture_shortcuts = self.capture_shortcuts_entry.get().split(" + ")
-        self.env.call_shortcuts = self.call_shortcuts_entry.get().split(" + ")
-        self.env.exit_shortcuts = self.exit_shortcut_entry.get().split(" + ")
-        self.env.auto_copy = self.auto_copy_var.get()
-        self.env.auto_save = self.auto_save_var.get()
-        self.env.auto_save_path = self.auto_save_path_entry.get()
-        self.clear_invalid_shortcuts(self.env.capture_shortcuts)
-        self.clear_invalid_shortcuts(self.env.call_shortcuts)
-        self.clear_invalid_shortcuts(self.env.exit_shortcuts)
-        self.env.save_to_file()
-        self.basic_frame.unbind_all("<MouseWheel>")
-        self.basic_frame.destroy()
-        self.master.unbind_keyboard_event()
-        self.master.add_keyboard_event()
-        self.parent.geometry(f"{self.orig_pos[0]}x{self.orig_pos[1]}")
-        self.parent.resizable(True, True)
+        def __save_setting():
+            self.env.capture_shortcuts = self.capture_shortcuts_entry.get().split(" + ")
+            self.env.call_shortcuts = self.call_shortcuts_entry.get().split(" + ")
+            self.env.exit_shortcuts = self.exit_shortcut_entry.get().split(" + ")
+            self.env.auto_copy = self.auto_copy_var.get()
+            self.env.auto_save = self.auto_save_var.get()
+            self.env.auto_save_path = self.auto_save_path_entry.get()
+            self.env.auto_delete = self.auto_delete_var.get()
+            self.env.auto_delete_upper = int(self.auto_delete_spinbox.get())
+            self.clear_invalid_shortcuts(self.env.capture_shortcuts)
+            self.clear_invalid_shortcuts(self.env.call_shortcuts)
+            self.clear_invalid_shortcuts(self.env.exit_shortcuts)
+            self.env.save_to_file()
+            self.basic_frame.unbind_all("<MouseWheel>")
+            self.basic_frame.destroy()
+            self.master.unbind_keyboard_event()
+            self.master.add_keyboard_event()
+        self.basic_frame.place_forget()
+        current_x, current_y = self.master.winfo_x(), self.master.winfo_y()
+        self.parent.geometry(f"{self.orig_pos[0]}x{self.orig_pos[1]}+{current_x}+{current_y}")
+        Thread(target=__save_setting).start()
 
     def edit_entry(self, event):
         entry: ttk.Entry = event.widget
