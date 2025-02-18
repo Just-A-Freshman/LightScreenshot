@@ -191,6 +191,8 @@ class ScreenshotTool(MainUI):
             return
         try:
             image: Image.Image = Image.open(img_path)
+            if image in self.screenshot.final_images:
+                return messagebox.showinfo("提示", "该图片已存在!")
             if image.width > SCREEN_WIDTH or image.height > SCREEN_HEIGHT:
                 image.thumbnail((SCREEN_WIDTH, SCREEN_HEIGHT))
         except UnidentifiedImageError:
