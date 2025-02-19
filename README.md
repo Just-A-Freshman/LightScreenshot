@@ -14,8 +14,10 @@
 - Currently supports one language: Chinese.
 - The screenshot cannot be edited; you can only capture the image as it appears on the screen.
 
+
 ## The executable file download link:
 [Click here to download!](https://github.com/Just-A-Freshman/LightScreenshot/releases/tag/ScreenshotTool)
+
 
 ## The UI image:
 ### The Main UI:
