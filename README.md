@@ -14,6 +14,9 @@
 - Currently supports one language: Chinese.
 - The screenshot cannot be edited; you can only capture the image as it appears on the screen.
 
+## The executable file download link:
+[ExecutableFile]()。
+
 ## The UI image:
 ### The Main UI:
 ![image](https://github.com/user-attachments/assets/f05b42a9-5037-454f-9cee-4b82b517d7e4)
