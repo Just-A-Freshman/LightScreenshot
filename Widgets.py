@@ -2,11 +2,10 @@ import tkinter as tk
 import math
 from threading import Thread
 from tkinter import ttk
-from Setting import SCREEN_WIDTH, SCREEN_HEIGHT, Style
-from PIL import Image, ImageTk
-from typing import TYPE_CHECKING
+from Setting import *
+from PIL import Image, ImageTk, ImageGrab
+from typing import Literal, TYPE_CHECKING
 
-from time import perf_counter
 
 
 if TYPE_CHECKING:
@@ -24,14 +23,14 @@ class FlatButton(tk.Label):
         self.__enter_fg = enter_fg
         self.__click_fg = click_color
         self.command = command
-        self.config(cursor="hand2", fg=fg)
+        self.config(fg=fg)
         if fg == enter_fg:
             raise ValueError("enter_fg must be different from fg")
-        self.bind("<Enter>", lambda _: self.config(fg=enter_fg))
-        self.bind("<Leave>", lambda _: self.config(fg=self.__fg))
+        self.bind("<Enter>", lambda _: self.config(fg=enter_fg, cursor="hand2"))
+        self.bind("<Leave>", lambda _: self.config(fg=self.__fg, cursor=""))
         self.bind("<Button-1>", lambda _: self.config(fg=self.__click_fg))
         self.bind("<ButtonRelease-1>", self.__command)
- 
+
     def __command(self, event):
         try:
             if self.cget("fg") in (self.__enter_fg, self.__click_fg):
@@ -41,17 +40,225 @@ class FlatButton(tk.Label):
             pass
         except TypeError:
             self.config(fg=self.__fg)
+        # if self.cget("fg") in (self.__enter_fg, self.__click_fg):
+        #     self.command(event)
+        # self.config(fg=self.__fg)
 
- 
+
+class ScreenshotCanvas(tk.Canvas):
+    alpha = 90
+    def __init__(self, parent, screenshot: 'ScreenshotUtils', *args, **kwargs):
+        super().__init__(parent, *args, **kwargs, bg="white", highlightthickness=0)
+        self.parent = parent
+        self.screenshot: 'ScreenshotUtils' = screenshot
+        self.orig_image: Image.Image = None
+        self.orig_imagetk: ImageTk.PhotoImage = None
+        self.overlay_imagetk: ImageTk.PhotoImage = None
+        self.__image_id: int = 0
+        self.__temp_rect_id: int = 0
+        self.__temp_thread: Thread = None
+
+    def make_screenshot(self):
+        self.orig_image = ImageGrab.grab()
+        self.screenshot.current_image = self.orig_image
+        self.screenshot.pixel_reader = self.orig_image.convert("RGB")
+        self.orig_imagetk = ImageTk.PhotoImage(self.orig_image)
+        self.__image_id = self.create_image(0, 0, anchor=tk.NW, image=self.orig_imagetk)
+        self.__temp_rect_id = self.create_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, outline="#1AAE1A", width=2)
+        self.place(x=0, y=0, relwidth=1, relheight=1)
+        self.__temp_thread = Thread(target=self.get_overlay_image)
+        self.__temp_thread.start()
+
+    def get_overlay_image(self) -> ImageTk.PhotoImage:
+        overlay = Image.new(
+            "RGBA", (self.orig_image.width, self.orig_image.height),
+            (0, 0, 0, self.__class__.alpha)
+        )
+        overlayed_image = Image.alpha_composite(self.orig_image.convert("RGBA"), overlay)
+        self.overlay_imagetk = ImageTk.PhotoImage(overlayed_image)
+
+    def on_press(self):
+        self.__temp_thread.join()
+        self.delete(self.__temp_rect_id)
+        self.itemconfig(self.__image_id, image=self.overlay_imagetk)
+        
+
+
+class Magnifier(object):
+    ZOOM: int = 4
+    ZOOM_AREA: float = TkS(28.75)
+    ZOOM_SIZE = int(ZOOM_AREA * ZOOM)
+    BORDER_WIDTH: int = 2
+    LAYOUT_OFFSET: int = 36
+    LAYOUT_ADJUST: int = 70
+
+    def __init__(self, parent: tk.Canvas, screenshot: 'ScreenshotUtils'):
+        self.parent = parent
+        self.screenshot: 'ScreenshotUtils' = screenshot
+        self.magnifier_window: int = None
+        self.zoom_image: int = None
+        self.basic_canvas: tk.Canvas = None
+        self.create_magnifier()
+
+    def create_magnifier(self):
+        cls = self.__class__
+        self.basic_canvas = tk.Canvas(
+            self.parent, width=cls.ZOOM_SIZE, height=cls.ZOOM_SIZE, 
+            highlightthickness=2, highlightbackground="#1AAE1A",
+        )
+        # 水平线和垂直线
+        self.zoom_image = self.basic_canvas.create_image(
+            cls.BORDER_WIDTH, cls.BORDER_WIDTH, anchor=tk.NW, image=None
+        )
+        self.basic_canvas.create_line(
+            cls.BORDER_WIDTH, cls.ZOOM_SIZE // 2 + cls.BORDER_WIDTH, 
+            cls.ZOOM_SIZE + cls.BORDER_WIDTH, cls.ZOOM_SIZE // 2 + cls.BORDER_WIDTH,
+            fill="#1AAE1A", width=2
+        )
+        self.basic_canvas.create_line(
+            cls.ZOOM_SIZE // 2 + cls.BORDER_WIDTH, cls.BORDER_WIDTH, 
+            cls.ZOOM_SIZE // 2 + cls.BORDER_WIDTH, cls.ZOOM_SIZE + cls.BORDER_WIDTH,
+            fill="#1AAE1A", width=2
+        )
+        self.magnifier_window = self.parent.create_window(
+            -cls.ZOOM_SIZE, -cls.ZOOM_SIZE, anchor=tk.NW, window=self.basic_canvas
+        )
+
+    def update_magnifier(self, event):
+        self.toggle_magnifier(conceal=False)
+        x, y = event.x_root, event.y_root
+        self.screenshot.magnifier_coords = self.caculate_magnifier_pos(x, y)
+        self.parent.coords(self.magnifier_window, *self.screenshot.magnifier_coords)
+        zoom_area = self.__class__.ZOOM_AREA
+        zoom_size = self.__class__.ZOOM_SIZE
+        img = self.screenshot.current_image.crop((x - zoom_area//2, y - zoom_area//2, x + zoom_area//2, y + zoom_area//2))
+        img = img.resize((zoom_size, zoom_size))
+        imgtk = ImageTk.PhotoImage(img)
+        self.basic_canvas.itemconfig(self.zoom_image, image=imgtk)
+        self.basic_canvas.imgtk = imgtk
+
+    def caculate_magnifier_pos(self, pointerx: int, pointery: int) -> tuple[int, int]:
+        offset = self.__class__.LAYOUT_OFFSET
+        zoom_size = self.__class__.ZOOM_SIZE
+        layout_adjust = self.__class__.LAYOUT_ADJUST
+        if pointerx + offset + zoom_size < SCREEN_WIDTH:
+            x = pointerx + offset
+        else:
+            x = pointerx - offset - zoom_size
+        if pointery + offset + zoom_size + layout_adjust < SCREEN_HEIGHT:
+            y = pointery + offset
+        else:
+            y = pointery - offset - zoom_size - layout_adjust
+        return x, y
+    
+    def toggle_magnifier(self, conceal: bool = False):
+        state = "hidden" if conceal else "normal"
+        self.parent.itemconfig(self.magnifier_window, state=state)
+
+
+class ScreenshotTip(object):
+    tip_style = {"anchor": tk.NW, "fill": "#FFFFFF", "font": ("微软雅黑", 10)}
+    bg_style = {"outline": "#000000", "fill": "#000000"}
+    def __init__(self, parent: ScreenshotCanvas, screenshot: 'ScreenshotUtils'):
+        self.parent: ScreenshotCanvas = parent
+        self.screenshot: 'ScreenshotUtils' = screenshot
+        self.__tip_item: list[int] = []
+        self.__shelter_item: list[int] = []
+        self.create_pointer_tip()
+        self.create_rect_size_tip()
+
+    def create_pointer_tip(self):
+        pos_tip = self.parent.create_text(0, 0, **self.__class__.tip_style)
+        rgb_tip = self.parent.create_text(0, 0, **self.__class__.tip_style)
+        pos_bg = self.parent.create_rectangle(0, 0, 0, 0, **self.__class__.bg_style)
+        rgb_bg = self.parent.create_rectangle(0, 0, 0, 0, **self.__class__.bg_style)
+        self.__tip_item.extend([pos_tip, pos_bg, rgb_tip, rgb_bg])
+
+    def create_rect_size_tip(self):
+        rect_size_tip = self.parent.create_text(0, 0, **self.__class__.tip_style)
+        rect_size_bg = self.parent.create_rectangle(0, 0, 0, 0, **self.__class__.bg_style)
+        self.__tip_item.extend([rect_size_tip, rect_size_bg])
+
+    def update_pointer_tip(self, event):
+        self.toggle_pointer_tip(conceal=False)
+        magnifier_x, magnifier_y = self.screenshot.magnifier_coords
+        zoom_size = Magnifier.ZOOM_SIZE
+        # 更新位置信息
+        pos_info = f"POS: ({event.x_root}, {event.y_root})"
+        pos_tip_coord = (magnifier_x, magnifier_y + zoom_size + 10)
+        # 更新RGB信息
+        rgb_info = f"RGB: {self.screenshot.pixel_reader.getpixel((event.x_root, event.y_root))}"
+        rgb_tip_coord = (magnifier_x, magnifier_y + zoom_size + 48)
+        self._update_text_and_bg(self.__tip_item[0], pos_info, pos_tip_coord)
+        self._update_text_and_bg(self.__tip_item[2], rgb_info, rgb_tip_coord)
+        self.shelter_redraw()
+
+    def update_rect_size_tip(self, event):
+        self.toggle_rect_size_tip(conceal=False)
+        left, top, right, bottom = self.screenshot.rect_coords
+        rect_w, rect_h = int(right - left), int(bottom - top)
+        rect_size_tip_info = f"{rect_w} × {rect_h}"
+        rect_size_tip_coord = (max(left, 0), max(top - 40, 0))
+        self._update_text_and_bg(self.__tip_item[4], rect_size_tip_info, rect_size_tip_coord)
+        self.shelter_redraw()
+
+    def _update_text_and_bg(self, text_item, text_content, text_coords):
+        self.parent.itemconfig(text_item, text=text_content)
+        self.parent.coords(text_item, *text_coords)
+        bg_item = self.__tip_item[self.__tip_item.index(text_item) + 1]
+        bg_coords = self.parent.bbox(text_item)
+        self.parent.coords(bg_item, *bg_coords)
+        self.parent.tag_raise(text_item)
+
+    def toggle_pointer_tip(self, conceal: bool = False):
+        self._toggle_items_visibility(self.__tip_item[0: 4], conceal)
+
+    def toggle_rect_size_tip(self, conceal: bool = False):
+        self._toggle_items_visibility(self.__tip_item[4: 6], conceal)
+
+    def _toggle_items_visibility(self, items, conceal: bool):
+        state = "hidden" if conceal else "normal"
+        for item in items:
+            self.parent.itemconfig(item, state=state)
+
+    def shelter_redraw(self):
+        self.delete_shelter_item()
+        overlapping = self.parent.find_overlapping(*self.screenshot.rect_coords)
+        for overlap in overlapping:
+            if overlap not in self.__tip_item:
+                continue
+            item_type = self.parent.type(overlap)
+            if item_type == "text":
+                coords = self.map_coords(*self.parent.coords(overlap))
+                text = self.parent.itemcget(overlap, "text")
+                id = self.screenshot.local_canvas.create_text(*coords, text=text, **ScreenshotTip.tip_style)
+                self.__shelter_item.append(id)
+            elif item_type == "rectangle":
+                x1, y1, x2, y2 = self.parent.coords(overlap)
+                mapped_x1, mapped_y1 = self.map_coords(x1, y1)
+                mapped_x2, mapped_y2 = self.map_coords(x2, y2)
+                id = self.screenshot.local_canvas.create_rectangle(mapped_x1, mapped_y1, mapped_x2, mapped_y2, **ScreenshotTip.bg_style)
+                self.__shelter_item.append(id)
+
+    def delete_shelter_item(self):
+        for id in self.__shelter_item:
+            self.screenshot.local_canvas.delete(id)
+        self.__shelter_item.clear()
+
+    def map_coords(self, x, y):
+        inner_bbox = self.screenshot.rect_coords
+        return x - inner_bbox[0], y - inner_bbox[1]
+
 
 class AdjustableRect(object):
     """
     The judgement seq is so important that you must care about:
     (right, bottom), (left, top), (right, top), (left, bottom),
-    (center_x, top), (center_x, bottom), (left, center_y, ), (right, center_y)
+    (center_x, top), (center_x, bottom), (left, center_y), (right, center_y)
     """
     ANCHOR_SIZE = 3
     ANCHOR_HOVER_DISTANCE = 20
+    RECT_BORDER_WIDTH = 2
     CURSOR_FILES_NAME = ["aero_nwse_l.cur", "aero_nesw_l.cur", "aero_ns_l.cur", "aero_ew_l.cur"]
     CURSOR_FILES = [f"@C:/Windows/Cursors/{cursor_file}" for cursor_file in CURSOR_FILES_NAME]
     CURSORS = [
@@ -60,16 +267,19 @@ class AdjustableRect(object):
         "fleur", "arrow"
     ]
 
-    def __init__(self, parent, screenshot):
-        self.parent: tk.Canvas = parent
+    def __init__(self, parent: ScreenshotCanvas, screenshot: 'ScreenshotUtils'):
+        self.parent: ScreenshotCanvas = parent
         self.screenshot: 'ScreenshotUtils' = screenshot
+        self.local_image_canvas: tk.Canvas = None
+        self.__local_image: int = 0
         self.__rect: int = 0
         self.__anchors: list[int] = []
         self.anchor_id: int = 0
- 
-    def rect_coords(self) -> tuple[int, int, int, int]:
-        return self.parent.coords(self.__rect)
+        self.create_rect()
     
+    def rect_coords(self) -> tuple[int, int, int, int]:
+        return self.parent.bbox(self.__rect)
+
     def anchor_coords(self) -> tuple[int, int, int, int]:
         left, top, right, bottom = self.rect_coords()
         horizontal_middle = (left + right) // 2
@@ -78,11 +288,7 @@ class AdjustableRect(object):
             (left, top), (horizontal_middle, top), (right, top), (right, vertical_middle),
             (right, bottom), (horizontal_middle, bottom), (left, bottom), (left, vertical_middle)
         )
-    
-    def rect_width_height(self) -> tuple[int, int]:
-        left, top, right, bottom = self.rect_coords()
-        return int(right - left), int(bottom - top)
-    
+
     def get_anchor(self, event) -> int:
         cls = self.__class__
         left, top, right, bottom = self.rect_coords()
@@ -95,9 +301,9 @@ class AdjustableRect(object):
             (center_x, top), (center_x, bottom), (left, center_y, ), (right, center_y)
         )
         for index, pos in enumerate(judgement_pos):
-            if near(event.x, pos[0]) and near(event.y, pos[1]):
+            if near(event.x_root, pos[0]) and near(event.y_root, pos[1]):
                 return index
-        if left < event.x < right and top < event.y < bottom:
+        if left < event.x_root < right and top < event.y_root < bottom:
             return 8
         return -1
  
@@ -112,7 +318,17 @@ class AdjustableRect(object):
             self.__anchors.append(anchor)
 
     def create_rect(self) -> None:
-        self.__rect= self.parent.create_rectangle(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, outline='#1AAE1A', width=2)
+        self.local_image_canvas = tk.Canvas(self.parent, highlightthickness=0, highlightbackground="#1AAE1A")
+        self.screenshot.local_canvas = self.local_image_canvas
+        self.__local_image = self.local_image_canvas.create_image(0, 0, anchor="nw", image=self.parent.orig_imagetk)
+        self.__border = self.local_image_canvas.create_rectangle(
+            1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, 
+            outline="#1AAE1A", width=self.__class__.RECT_BORDER_WIDTH
+        )
+        self.__rect = self.parent.create_window(
+            -SCREEN_WIDTH, -SCREEN_HEIGHT, 
+            anchor="nw", window=self.local_image_canvas, 
+        )
         self.create_anchors()
 
     def move_anchors(self):
@@ -124,55 +340,131 @@ class AdjustableRect(object):
             )
 
     def on_press(self, event):
-        self.screenshot.start_x = event.x
-        self.screenshot.start_y = event.y
+        self.screenshot.start_x = event.x_root
+        self.screenshot.start_y = event.y_root
 
     def on_release(self, _):
         self.screenshot.start_x, self.screenshot.start_y,\
         self.screenshot.end_x, self.screenshot.end_y = self.rect_coords()
- 
+
     def on_hover(self, event):
         self.anchor_id = self.get_anchor(event)
         cursor = self.CURSORS[self.anchor_id]
         self.parent.config(cursor=cursor)
 
     def move_rect(self, event):
-        offset_x = event.x - self.screenshot.move_start_x
-        offset_y = event.y - self.screenshot.move_start_y
+        offset_x = event.x_root - self.screenshot.move_start_x
+        offset_y = event.y_root - self.screenshot.move_start_y
         if self.screenshot.start_x + offset_x >= 0 and self.screenshot.end_x + offset_x <= SCREEN_WIDTH:
             self.screenshot.start_x += offset_x
             self.screenshot.end_x += offset_x
         if  self.screenshot.start_y + offset_y >= 0 and self.screenshot.end_y + offset_y <= SCREEN_HEIGHT:
             self.screenshot.start_y += offset_y
             self.screenshot.end_y += offset_y
-        self.screenshot.move_start_x = event.x
-        self.screenshot.move_start_y = event.y
-        self.parent.coords(self.__rect, self.screenshot.start_x, self.screenshot.start_y, self.screenshot.end_x, self.screenshot.end_y)
-        self.move_anchors()
+        self.screenshot.move_start_x = event.x_root
+        self.screenshot.move_start_y = event.y_root
+        self.update_rect()
 
     def rect_adjust(self, event):
         if self.anchor_id == 8:
             return self.move_rect(event)
+        update_pos = (event.x_root, event.y_root)
         if self.anchor_id == 0:
-            self.screenshot.end_x, self.screenshot.end_y = event.x, event.y
+            self.screenshot.end_x, self.screenshot.end_y = update_pos
         elif self.anchor_id == 1:
-            self.screenshot.start_x, self.screenshot.start_y = event.x, event.y
+            self.screenshot.start_x, self.screenshot.start_y = update_pos
         elif self.anchor_id == 2:
-            self.screenshot.end_x, self.screenshot.start_y = event.x, event.y
+            self.screenshot.end_x, self.screenshot.start_y = update_pos
         elif self.anchor_id == 3:
-            self.screenshot.start_x, self.screenshot.end_y = event.x, event.y
+            self.screenshot.start_x, self.screenshot.end_y = update_pos
         elif self.anchor_id == 4:
-            self.screenshot.start_y = event.y
+            self.screenshot.start_y = event.y_root
         elif self.anchor_id == 5:
-            self.screenshot.end_y = event.y
+            self.screenshot.end_y = event.y_root
         elif self.anchor_id == 6:
-            self.screenshot.start_x = event.x
+            self.screenshot.start_x = event.x_root
         elif self.anchor_id == 7:
-            self.screenshot.end_x = event.x
+            self.screenshot.end_x = event.x_root
         else:
             return
-        self.parent.coords(self.__rect, self.screenshot.start_x, self.screenshot.start_y, self.screenshot.end_x, self.screenshot.end_y)
+        self.update_rect()
+
+    def update_rect(self):
+        x1 = min(self.screenshot.start_x, self.screenshot.end_x)
+        y1 = min(self.screenshot.start_y, self.screenshot.end_y)
+        x2 = max(self.screenshot.start_x, self.screenshot.end_x)
+        y2 = max(self.screenshot.start_y, self.screenshot.end_y)
+        self.parent.coords(self.__rect, x1, y1)
+        self.parent.itemconfig(self.__rect, width=max(x2 - x1, 1), height=max(y2 - y1, 1))
+        self.local_image_canvas.coords(self.__local_image, -x1, -y1)
+        self.local_image_canvas.coords(self.__border, 1, 1, x2 - x1 - 1, y2 - y1 - 1)
+        self.screenshot.rect_coords = self.parent.bbox(self.__rect)
         self.move_anchors()
+
+
+class EditBar(object):
+    BAR_WIDTH = TkS(150)
+    BAR_HEIGHT = TkS(35)
+    DELTA = TkS(5)
+    def __init__(self, parent: ScreenshotCanvas, screenshot: 'ScreenshotUtils'):
+        self.parent: ScreenshotCanvas = parent
+        self.screenshot: 'ScreenshotUtils' = screenshot
+        self.__edit_bar = self.create_edit_bar()
+
+    def create_edit_bar(self):
+        edit_bar = tk.Frame(self.parent, bg="#FFFFFF")
+        cancel_btn = self._set_cancel_btn(edit_bar)
+        confirm_btn = self._set_confirm_btn(edit_bar)
+        ocr_btn = self._set_ocr_btn(edit_bar)
+        ocr_btn.pack(side=tk.RIGHT, padx=10)
+        cancel_btn.pack(side=tk.RIGHT, padx=5)
+        confirm_btn.pack(side=tk.RIGHT, padx=10)
+        return edit_bar
+    
+    def get_children(self):
+        return self.__edit_bar.winfo_children()
+    
+    def _set_cancel_btn(self, parent) -> FlatButton:
+        cancel_btn = FlatButton(
+            parent, text="×", bg="#FFFFFF",
+            enter_fg="#DB1A21",fg="#CC181F", font=("微软雅黑", 20)
+        )
+        cancel_btn.pack(side=tk.RIGHT, padx=5)
+        return cancel_btn
+
+    def _set_confirm_btn(self, parent) -> FlatButton:
+        confirm_btn = FlatButton(
+            parent, fg="#23B34C", text="√",
+            enter_fg="#27C956", bg="#FFFFFF", font=("微软雅黑", 20)
+        )
+        confirm_btn.pack(side=tk.RIGHT, padx=10)
+        return confirm_btn
+    
+    def _set_ocr_btn(self, parent) -> FlatButton:
+        ocr_btn = FlatButton(
+            parent, text="T", bg="#FFFFFF", 
+            font=("High Tower Text", 20), fg="#008BC7", enter_fg="#00A6ED"
+        )
+        ocr_btn.pack(side=tk.RIGHT, padx=10)
+        return ocr_btn
+    
+    def toggle_edit_bar(self, conceal: bool = False):
+        if conceal:
+            self.__edit_bar.place_forget()
+            return
+        width = self.__class__.BAR_WIDTH
+        height = self.__class__.BAR_HEIGHT
+        delta = self.__class__.DELTA
+        place_x = max(min(self.screenshot.end_x - width, SCREEN_WIDTH - width), 0)
+        place_y = min(self.screenshot.end_y + delta, SCREEN_HEIGHT - height)
+        if place_y == SCREEN_HEIGHT - height and self.screenshot.start_y - height - delta > 0:
+            place_y = self.screenshot.start_y - height - delta
+        self.__edit_bar.place(x=place_x, y=place_y, width=width, height=height)
+
+    def bind_command(self, command_list: list):
+        widgets: list[FlatButton] = self.get_children()
+        for widget, command in zip(widgets, command_list):
+            widget.command = command
 
 
 class ShowImageCanvas(object):
@@ -180,6 +472,14 @@ class ShowImageCanvas(object):
         self.parent: 'ScreenshotTool' = parent
         self.__basic_frame = tk.Frame(parent, bg="#202020")
         self.__canvas_image: CanvasImage = None
+
+    def show_menu_bar(self, event):
+        menu = tk.Menu(self.__canvas_image.canvas, tearoff=0, font=Style.head2)
+        if self.__basic_frame.winfo_manager() == "pack":
+            menu.add_command(label="隐藏菜单", command=lambda: self.__basic_frame.place(x=0, y=0, relwidth=1, relheight=1))
+        else:
+            menu.add_command(label="显示菜单", command=lambda: self.__basic_frame.pack(expand=True, fill="both"))
+        menu.post(event.x_root, event.y_root)
 
     def __pack_basic_frame(self):
         self.__basic_frame.pack(expand=True, fill="both")
@@ -195,6 +495,7 @@ class ShowImageCanvas(object):
         else:
             self.__canvas_image = CanvasImage(image)
             self.__canvas_image.set_basic_canvas(self.__basic_frame)
+            self.__canvas_image.canvas.bind("<Button-3>", self.show_menu_bar)
         self.__show_image(show_width, show_height)
 
     def __get_fit_show_size(self, image: Image.Image) -> tuple[int, int]:
@@ -223,7 +524,6 @@ class ShowImageCanvas(object):
 
     def destroy(self):
         self.__canvas_image.canvas.delete("all")
-
 
 
 class AutoScrollbar(ttk.Scrollbar):
@@ -406,15 +706,12 @@ class CanvasImage:
 
     def show_image(self, width, height):
         # This is for show image quickly. when user try to scroll or zoom, then __show_image will be called.
-        try:
-            self.fit_to_size(width, height)
-            image: Image.Image = self.__raw_image.copy()
-            image.thumbnail((width, height), Image.Resampling.NEAREST)
-            imagetk = ImageTk.PhotoImage(image)
-            self.canvas.create_image(0, 0, anchor='nw', image=imagetk)
-            self.canvas.imagetk = imagetk
-        except AttributeError:
-            self.__show_image()
+        self.fit_to_size(width, height)
+        image: Image.Image = self.__raw_image.copy()
+        image.thumbnail((width, height), Image.Resampling.NEAREST)
+        imagetk = ImageTk.PhotoImage(image)
+        self.canvas.create_image(0, 0, anchor='nw', image=imagetk)
+        self.canvas.imagetk = imagetk
 
     def __show_image(self):
         """ Show image on the Canvas. Implements correct image zoom almost like in Google Maps """

@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
 from Utils import ScreenshotUtils
-from PIL import ImageGrab, ImageTk
 from Widgets import *
 from Setting import *
 from typing import TYPE_CHECKING
@@ -27,9 +26,11 @@ class MainUI(tk.Tk):
         self.setting_btn: FlatButton = self.set_setting_btn()
         self.show_image_canvas: ShowImageCanvas = self.set_show_image_canvas()
         self.capture_win: tk.Toplevel = None
-        self.full_screenshot_canvas: tk.Canvas = None
+        self.full_screenshot_canvas: ScreenshotCanvas = None
+        self.magnifer: Magnifier = None
         self.adjust_rect: AdjustableRect = None
-        self.adjust_bar: tk.Frame = None
+        self.screenshot_tip: ScreenshotTip = None
+        self.edit_bar: EditBar = None
 
     def set_window(self):
         self.title("截图工具")
@@ -41,7 +42,7 @@ class MainUI(tk.Tk):
 
     def set_menubar(self) -> tk.Frame:
         menubar = tk.Frame(self, bg="#FFFFFF", height=TkS(30))
-        menubar.pack(fill=tk.X)
+        menubar.pack(side=tk.TOP, fill=tk.X)
         menubar.rowconfigure(0, weight=1)
         menubar.grid_propagate(False)
         return menubar
@@ -89,7 +90,7 @@ class MainUI(tk.Tk):
         )
         turn_page_btn.grid(row=0, column=5)
         return turn_page_btn
-    
+
     def set_delete_btn(self) -> FlatButton:
         delete_btn = FlatButton(
             self.menu_bar, text="🗑", bg="#FFFFFF", font=("Segoe UI Symbol", 26, "bold"),
@@ -103,64 +104,30 @@ class MainUI(tk.Tk):
         )
         setting_btn.grid(row=0, column=7)
         return setting_btn
-    
-    def set_cancel_btn(self, parent) -> FlatButton:
-        cancel_btn = FlatButton(
-            parent, self.clear_capture_info, text="×", bg="#FFFFFF",
-            enter_fg="#DB1A21",fg="#CC181F", font=("微软雅黑", 20)
-        )
-        cancel_btn.pack(side=tk.RIGHT, padx=5)
-        return cancel_btn
-
-    def set_confirm_btn(self, parent) -> FlatButton:
-        confirm_btn = FlatButton(
-            parent, self.confirm_capture, fg="#23B34C", text="√",
-            enter_fg="#27C956", bg="#FFFFFF", font=("微软雅黑", 20)
-        )
-        confirm_btn.pack(side=tk.RIGHT, padx=10)
-        return confirm_btn
  
     def set_show_image_canvas(self) -> ShowImageCanvas:
         canvas = ShowImageCanvas(self)
         return canvas
-    
-    def set_adjust_bar(self) -> tk.Frame:
-        self.adjust_bar = tk.Frame(self.full_screenshot_canvas, bg="#FFFFFF", height=50)
-        cancel_btn = self.set_cancel_btn(self.adjust_bar)
-        confirm_btn = self.set_confirm_btn(self.adjust_bar)
-        cancel_btn.pack(side=tk.RIGHT, padx=5)
-        confirm_btn.pack(side=tk.RIGHT, padx=10)
- 
-    def set_magnifier_frame(self, event) -> None:
-        initial_coord = (0, 0, 0, 0)
-        main_frame_id = self.full_screenshot_canvas.create_rectangle(*initial_coord, outline='#1AAE1A', width=1)
-        horrontal_line = self.full_screenshot_canvas.create_line(*initial_coord, fill="#1AAE1A", width=2)
-        vertical_line = self.full_screenshot_canvas.create_line(*initial_coord, fill="#1AAE1A", width=2)
-        self.screenshot.screenshot_move_widget = [main_frame_id, horrontal_line, vertical_line]
 
-    def set_full_screenshot_canvas(self, parent) -> tk.Canvas:
-        img = ImageGrab.grab()
-        self.screenshot.current_image = img
-        self.screenshot.pixel_reader = img.convert("RGB")
-        photo = ImageTk.PhotoImage(img)
-        full_screenshot_canvas = tk.Canvas(parent, bg="white", highlightthickness=0)
-        full_screenshot_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
-        full_screenshot_canvas.image = photo
-        full_screenshot_canvas.pack(fill=tk.BOTH, expand=True)
-        return full_screenshot_canvas
+    def set_adjust_rect(self, parent) -> None:
+        self.adjust_rect = AdjustableRect(parent, self.screenshot)
+        return self.adjust_rect
+ 
+    def set_magnifier(self, parent) -> None:
+        magnifier = Magnifier(parent, self.screenshot)
+        return magnifier
     
-    def config_pos_rgb_info(
-            self, parent: tk.Canvas, pos: str, rgb: str, 
-            pos_coord: tuple[int, int], rgb_coord: tuple[int, int]
-        ) -> tuple[int]:
-        style = {"anchor": tk.NW, "font": ("微软雅黑", 9), "fill": "#FFFFFF"}
-        pos_info = parent.create_text(*pos_coord, text=pos, **style)
-        rgb_info = parent.create_text(*rgb_coord, text=rgb, **style)
-        pos_bg = parent.create_rectangle(*parent.bbox(pos_info), outline="#000000", fill="#000000")
-        rgb_bg = parent.create_rectangle(*parent.bbox(rgb_info), outline="#000000", fill="#000000")
-        parent.tag_raise(pos_info)
-        parent.tag_raise(rgb_info)
-        return pos_info, rgb_info, pos_bg, rgb_bg
+    def set_screenshot_tip(self, parent) -> None:
+        screenshot_tip = ScreenshotTip(parent, self.screenshot)
+        return screenshot_tip
+
+    def set_screenshot_canvas(self, parent):
+        screenshot_canvas = ScreenshotCanvas(parent, self.screenshot)
+        return screenshot_canvas
+    
+    def set_edit_bar(self, parent) -> None:
+        edit_bar = EditBar(parent, self.screenshot)
+        return edit_bar
 
 
 class SettingUI(object):

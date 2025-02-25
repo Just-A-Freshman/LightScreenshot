@@ -1,64 +1,143 @@
 from PIL import Image
 from Setting import SCREEN_WIDTH, SCREEN_HEIGHT, TkS
 from collections import deque
+from src.plugins.ocr import wcocr
+from tkinter import Canvas, Text, Widget
+import os
+import re
 
 
 class Event(object):
     def __init__(self, x, y):
-        self.x = x
-        self.y = y
+        self.x_root = x
+        self.y_root = y
 
 
 class ScreenshotUtils(object):
     """
     截图的关键是坐标；这个类管理着图片的引用和截图坐标；
     """
-    ZOOM: int = 4
-    ZOOM_WIDTH: float = TkS(28.75)
-    ZOOM_SCREEN_SIZE: int = int(ZOOM_WIDTH*ZOOM)
-    MAGNIFIER_OFFSET: int = 36
-    WIDTH_HEIGHT_OFFSET = 40
-    POS_TAG_GAP = 10
-    RGB_TAG_GAP = 47
-    MAGNIFIER_ADJUST = 70
-    AJUST_BAR_WIDTH: int = TkS(100)
-
     def __init__(self):
-        self.start_x = self.start_y = self.end_x = self.end_y = 0
-        self.move_start_x = self.move_start_y = self.move_end_x = self.move_end_y = 0
+        # 必须持久化的变量：
+        self.final_images: deque[Image.Image] = deque([])
         self.page_index: int = 0
+        # 截图时的临时变量
+        self.start_x = self.start_y = self.end_x = self.end_y = -1
+        self.move_start_x = self.move_start_y = self.move_end_x = self.move_end_y = 0
         self.current_image: Image.Image = None
         self.pixel_reader = None
-        self.final_images: deque[Image.Image] = deque([])
-        # 这种是只移动但不改变大小和内容的控件，只需移动无需重绘
-        self.screenshot_move_widget = list()
-        # 这种是移动和改变大小的控件，需要实时重绘
-        self.screenshot_redraw_widget = list()
-    
-    @classmethod
-    def move_widget_coords(cls, x, y) -> list[tuple[int, int, int, int]]:
-        # 按照主框架，水平线，垂直线的顺序返回坐标
-        main_frame_coord  = (x, y, x+cls.ZOOM_SCREEN_SIZE, y+cls.ZOOM_SCREEN_SIZE)
-        horrontal_line_coord = (x, y+cls.ZOOM_SCREEN_SIZE // 2, x+cls.ZOOM_SCREEN_SIZE, y+cls.ZOOM_SCREEN_SIZE // 2)
-        vertical_line_coord = (x+cls.ZOOM_SCREEN_SIZE // 2, y, x+cls.ZOOM_SCREEN_SIZE // 2, y+cls.ZOOM_SCREEN_SIZE)
-        return [main_frame_coord, horrontal_line_coord, vertical_line_coord]
+        # 一些组件之间的共享变量
+        self.magnifier_coords: tuple[int, int] = None
+        self.rect_coords: tuple[int, int, int, int] = None
+        self.local_canvas: Canvas = None
 
-    def redraw_widget_coords(self, x, y) -> list[tuple]:
-        # 按照"放大镜图像"、"长 × 宽"、"POS标签"、"RGB标签"的顺序返回坐标
-        offset = self.__class__.MAGNIFIER_OFFSET
-        zoom_size = self.__class__.ZOOM_SCREEN_SIZE
-        if x + offset + zoom_size < SCREEN_WIDTH:
-            x_offset = x + offset
-        else:
-            x_offset = x - offset - zoom_size
-        if y + offset + zoom_size + self.__class__.MAGNIFIER_ADJUST < SCREEN_HEIGHT:
-            y_offset = y + offset
-        else:
-            y_offset = y - offset - zoom_size - self.__class__.MAGNIFIER_ADJUST
-        width_height_y = max(min(self.start_y, self.end_y) - self.__class__.WIDTH_HEIGHT_OFFSET, 0)
-        width_height_info = (max(min(self.start_x, self.end_x), 0), width_height_y)
-        magnifier_coord = (x_offset, y_offset)
-        pos_info = (x_offset, y_offset + zoom_size + self.__class__.POS_TAG_GAP)
-        rgb_info = (x_offset, y_offset + zoom_size + self.__class__.RGB_TAG_GAP)
-        return [magnifier_coord, width_height_info, pos_info, rgb_info]
+    def initialize_coords(self):
+        self.start_x = self.start_y = self.end_x = self.end_y = -1
+        self.rect_coords = [0, 0, SCREEN_WIDTH, SCREEN_HEIGHT]
+
+    def initialize_temp_variables(self):
+        self.current_image = None
+        self.pixel_reader = None
+        self.magnifier_coords = None
+        self.rect_coords = None
+        self.local_canvas = None
+
+    def get_default_screenshot_coords(self):
+        self.start_x = self.start_y = 0
+        self.end_x = SCREEN_WIDTH
+        self.end_y = SCREEN_HEIGHT
+
+    @property
+    def coords_underupdated(self) -> bool:
+        return self.start_x == -1 or self.start_y == -1 or self.end_x == -1 or self.end_y == -1
     
+
+class WechatOCRUtils(object):
+    TEXT_WIDTH = TkS(200)
+    TEXT_HEIGHT = TkS(150)
+    def __init__(self, screenshot: ScreenshotUtils):
+        self.wechatocr_path = self.find_wechatocr_exe()
+        self.wechat_path = self.find_wechat_path()
+        self.screenshot = screenshot
+        self.ocr_result_text: Text = None
+
+    def find_wechatocr_exe(self) -> str:
+        appdata_path = os.getenv("APPDATA")
+        if not appdata_path:
+            return "src/plugins/ocr/WeChatOCR.exe"
+        base_path = os.path.join(appdata_path, r"Tencent\WeChat\XPlugin\Plugins\WeChatOCR")
+        version_pattern = re.compile(r'\d+')
+        try:
+            path_temp = os.listdir(base_path)
+        except FileNotFoundError:
+            return "src/plugins/ocr/WeChatOCR.exe"
+        for temp in path_temp:
+            if version_pattern.match(temp):
+                wechatocr_path = os.path.join(base_path, temp, 'extracted', 'WeChatOCR.exe')
+                if os.path.isfile(wechatocr_path):
+                    return wechatocr_path
+        return "src/plugins/ocr/WeChatOCR.exe"
+
+    def find_wechat_path(self) -> str:
+        common_paths = r"C:\Program Files\Tencent\WeChat"
+        version_pattern = re.compile(r'\[\d+\.\d+\.\d+\.\d+\]')
+        path_temp = os.listdir(common_paths)
+        for temp in path_temp:
+            if version_pattern.match(temp):
+                wechat_path = os.path.join(common_paths, temp)
+                if os.path.isdir(wechat_path):
+                    return wechat_path
+        return "src/plugins/ocr"
+
+    def destroy_ocr_result_text(self):
+        if self.ocr_result_text is None:
+            return
+        self.ocr_result_text.destroy()
+        self.ocr_result_text = None
+    
+    def check_valid(self) -> bool:
+        if not os.path.isfile(self.wechatocr_path) and os.path.isdir(self.wechat_path):
+            self.ocr_result_text.insert("end", "未检测到微信安装路径!\n")
+            self.ocr_result_text.insert("end", "如要使用OCR功能，请访问下述网址进行资源下载: \n")
+            self.ocr_result_text.insert("end", "https://github.com/Just-A-Freshman/Wechat_OCR/tree/main/WechatOCR/src\n")
+            self.ocr_result_text.insert("end", "将下载文件中src目录下的所有文件放到该文件夹下:\n")
+            self.ocr_result_text.insert("end", f"{os.path.join(os.path.dirname(__file__), r'src/plugins/ocr')}\n")
+            return False
+        return True
+
+    def toggle_ocr_result_text(self, conceal: bool) -> None:
+        if self.ocr_result_text is None:
+            return
+        if conceal:
+            self.ocr_result_text.place_forget()
+            return
+        cls = self.__class__
+        x1, y1, x2, y2 = self.screenshot.rect_coords
+        place_x, place_y = x2, y1
+        if place_x + cls.TEXT_WIDTH > SCREEN_WIDTH:
+            place_x = x1 - cls.TEXT_WIDTH
+        if place_y + cls.TEXT_HEIGHT > SCREEN_HEIGHT:
+            place_y = y2 - cls.TEXT_HEIGHT
+        self.ocr_result_text.place(x=place_x, y=place_y, width=cls.TEXT_WIDTH, height=cls.TEXT_HEIGHT)
+
+    def get_ocr_result(self, parent: Widget, image: Image.Image) -> str:
+        if self.ocr_result_text is None:
+            self.ocr_result_text = Text(parent, font=("微软雅黑", 10))
+        valid_flag = self.check_valid()
+        if not valid_flag:
+            self.toggle_ocr_result_text(conceal=False)
+        random_bytes = os.urandom(4)
+        random_int = int.from_bytes(random_bytes, byteorder='big')
+        temp_path = os.path.join("src/Temp", f"{random_int}.png")
+        image.save(temp_path)
+        wechat_path = self.find_wechat_path()
+        wechatocr_path = self.find_wechatocr_exe()
+        wcocr.init(wechatocr_path, wechat_path)
+        result = wcocr.ocr(temp_path)
+        self.ocr_result_text.delete("1.0", "end")
+        for temp in result['ocr_response']:
+            self.ocr_result_text.insert("end", temp['text'])
+            self.ocr_result_text.insert("end", "\n")
+        self.toggle_ocr_result_text(conceal=False)
+        for file in os.scandir("src/Temp"):
+            os.remove(file.path)

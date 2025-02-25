@@ -104,7 +104,7 @@ KEYS_TRANSFORM = {
     "Win_L": "Win", "Win_R": "Win"
 }
 
-SETTING_FILE = os.path.join("Setting", "settings.json")
+SETTING_FILE = os.path.join("src", "settings.json")
 SCREEN_WIDTH = user32.GetSystemMetrics(0)
 SCREEN_HEIGHT = user32.GetSystemMetrics(1)
 WINDOW_WIDTH = TkS(280)
