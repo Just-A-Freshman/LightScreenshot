@@ -128,6 +128,7 @@ class WechatOCRUtils(object):
             self.toggle_ocr_result_text(conceal=False)
         random_bytes = os.urandom(4)
         random_int = int.from_bytes(random_bytes, byteorder='big')
+        os.makedirs("src/Temp", exist_ok=True)
         temp_path = os.path.join("src/Temp", f"{random_int}.png")
         image.save(temp_path)
         wechat_path = self.find_wechat_path()
