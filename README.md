@@ -1,6 +1,7 @@
 # A simple make screenshot tool
 
 ## Feature List
+- Light! It just smaller than 10MB.
 - Basic Screenshot and Adjustment: After taking a screenshot, the frame can be moved and adjusted by dragging the edges or corners (similar to WeChat).
 - Copy to Clipboard / Save image to disk / Load a new image to the view
 - Page Through Screenshots: Quickly view different screenshots by flipping through them.
@@ -8,6 +9,7 @@
 - Always-On-Top Window: Keep the window always on top, ensuring it is not obscured by other windows. This is convenient for placing screenshots on the side for reference.
 - Settings Options: Customize settings, including shortcuts and options for automatic copy/save/delete.
 - Optimized Canvas Zoom: Enhanced canvas zoom functionality with efficient size adjustment and support for mouse wheel operations.
+- OCR! You can config yourself to use other's ocr plugins. The default ocr is basic on Wechat. And the program will auto-search your Wechat installed location.
 
 ## limitation
 - Only compatible with Windows operating systems.
