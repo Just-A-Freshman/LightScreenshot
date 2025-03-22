@@ -1,39 +1,37 @@
 # A simple make screenshot tool
 
-## Feature List
-- Light! It just smaller than 10MB.
-- Basic Screenshot and Adjustment: After taking a screenshot, the frame can be moved and adjusted by dragging the edges or corners (similar to WeChat).
-- Copy to Clipboard / Save image to disk / Load a new image to the view
-- Page Through Screenshots: Quickly view different screenshots by flipping through them.
-- Delete Images from View: Remove images from the view without affecting the original files on disk; only the in-memory image reference is deleted.
-- Always-On-Top Window: Keep the window always on top, ensuring it is not obscured by other windows. This is convenient for placing screenshots on the side for reference.
-- Settings Options: Customize settings, including shortcuts and options for automatic copy/save/delete.
-- Optimized Canvas Zoom: Enhanced canvas zoom functionality with efficient size adjustment and support for mouse wheel operations.
-- OCR! You can config yourself to use other's ocr plugins. The default ocr is basic on Wechat. And the program will auto-search your Wechat installed location.
+## Feature Descriptions
+### Light! It just smaller than 10MB.
+### Basic
+1. Basic Screenshot and Adjustment: After capturing a screenshot, the frame can be moved and resized by dragging its edges or corners. ![image](https://github.com/user-attachments/assets/b4ee6f7b-c74b-4471-91db-fd66b8a96d21)
+2. Copy / Save / Load / Turn Page / Delete: Options to copy, save, load a new image, turn pages, and delete within the view.![image](https://github.com/user-attachments/assets/4f73860b-3a6a-42a9-87b2-c8e4af1471aa)
+3. Settings Options: Customize settings, including shortcuts and options for automatic copy, save, and delete. ![image](https://github.com/user-attachments/assets/eb269ba3-13b5-4676-9c31-5fb1c4ec43c2)
+4. Minimize to Tray: Clicking the icon in the system tray will minimize the tool, hiding it from the taskbar.![image](https://github.com/user-attachments/assets/0a28e73e-1818-45ae-bf56-8fdfb82f9651)
+
+  
+### Special
+1. OCR Customization: The OCR feature can be configured to use third-party OCR plugins. The default OCR is based on WeChat, and the program will automatically detect the installed location of WeChat on your system.![image](https://github.com/user-attachments/assets/c4e5a9fc-4b8b-4e93-acfc-47f776aee4d0)
+
+2. Nail Image to Desktop: Attach images to the desktop for easy viewing. Zoom in and out using the scroll wheel, and edit by holding down the "Ctrl" key.![image](https://github.com/user-attachments/assets/3ad924af-458b-4c16-bb3d-e86b95ba1408)
+
+3. Enhanced Canvas Zoom: Improved canvas zoom functionality with efficient size adjustment and support for mouse wheel operations.![image](https://github.com/user-attachments/assets/a6b6ca71-139c-497e-bf83-979e0fe64a58)
+
+
+## Default Embedded Shortcuts
+1. Left/Right Arrow Keys: Flip pages.
+2. Up/Down/Left/Right Arrow Keys during Screenshot: Fine-tune the selection area.
+3. Shift Key: Toggle color mode.
+4. Spacebar: Copy color code.
 
 ## limitation
-- Only compatible with Windows operating systems.
-- Currently supports one language: Chinese.
-- The screenshot cannot be edited; you can only capture the image as it appears on the screen.
+1. Only compatible with Windows operating systems.
+2. Currently supports one language: Chinese.
 
 
 ## The executable file download link:
 [Click here to download!](https://github.com/Just-A-Freshman/LightScreenshot/releases/tag/ScreenshotTool)
 
-
-## The UI image:
-### The Main UI:
-![image](https://github.com/user-attachments/assets/f05b42a9-5037-454f-9cee-4b82b517d7e4)
-
-### press the first "cut" button
-![image](https://github.com/user-attachments/assets/5eb36c5a-de26-419a-ba12-a6077b605664)
-![image](https://github.com/user-attachments/assets/62aa3d73-c59d-4cb3-8580-0ff3e0a98917)
-
-### wheel to adjust the size of image
-![image](https://github.com/user-attachments/assets/8b94c811-7fcb-42aa-b51a-c4a4cb8a437c)
-
-### Setting UI(currently it's the chinese)
-![image](https://github.com/user-attachments/assets/49823e5c-2659-4008-be78-46d439496067)
+**Please note that the file in the link is an older version. The new version of the executable has not been packaged and compiled yet. However, the code in the repository is up-to-date, and you can try compiling it yourself.**
 
 
-**If you like this project, please be sure to give it a star. I would be extremely grateful.**
+**If you like this project, please be sure to give it a star. I would be extremely grateful！！**
