@@ -1,0 +1,12 @@
+{
+    "background": "background",
+    "lightcolor": "background",
+    "darkcolor": "background",
+    "troughcolor": "troughcolor",
+    "bordercolor": "troughcolor",
+    "gripcount": 0,
+    "width": 20,
+    "relief": "flat",
+    "borderwidth": 0,
+    "arrowsize": 0
+}

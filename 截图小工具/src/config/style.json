@@ -1,0 +1,34 @@
+{
+    "Color": [
+        "#FFFFFF",
+        "#000000",
+        "#F3F3F3",
+        "#202020",
+        "#5F5F5F",
+        "#424242",
+        "#7F7F7F",
+        "#ED1C24",
+        "#1AAE1A",
+        "#DB1A21",
+        "#CC181F",
+        "#23B34C",
+        "#27C956",
+        "#008BC7",
+        "#00A6ED",
+        "#E61B23"
+    ],
+    "fontFamily": [
+        "微软雅黑",
+        "Segoe UI Emoji",
+        "Segoe UI Symbol",
+        "High Tower Text",
+        "楷体"
+    ],
+    "fontSize": [
+        9,
+        12,
+        15,
+        18,
+        20
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "capture_shortcuts": [
+        "Alt",
+        "Z"
+    ],
+    "call_shortcuts": [
+        "Alt",
+        "Q"
+    ],
+    "exit_shortcuts": [
+        "Alt",
+        "Return"
+    ],
+    "auto_copy": true,
+    "auto_save": false,
+    "auto_save_path": "src/image/default_save",
+    "auto_delete": false,
+    "auto_delete_upper": 5,
+    "ocr_config": {
+        "parser_keys": {
+            "text": "text",
+            "box": "box",
+            "rate": "rate"
+        },
+        "command": "_internal\\wcocr.exe --image_path=$image_path"
+    },
+    "edit_exe_path": ""
+}
