@@ -1,0 +1,151 @@
+{
+    "Frame": {
+        "bg": "#F3F3F3",
+        "highlightthickness": 0
+    },
+    "LabelFrame": {
+        "font": [
+            "微软雅黑",
+            15
+        ],
+        "bg": "#F3F3F3"
+    },
+    "Label": {
+        "font": [
+            "微软雅黑",
+            12
+        ],
+        "bg": "#F3F3F3"
+    },
+    "Button": {
+        "designs": {
+            "font": [
+                "Segoe UI Emoji",
+                18
+            ],
+            "anchor": "w",
+            "bg": "#F3F3F3",
+            "fg": "#212121",
+            "enter_fg": "#424242",
+            "click_fg": "#25C253"
+        },
+        "characters": {
+            "font": [
+                "微软雅黑",
+                10
+            ],
+            "fg": "#3B3B3B",
+            "enter_fg": "#000000",
+            "click_fg": "#25C253"
+        },
+        "special": {
+            "📤︎": {
+                "font": [
+                    "Segoe UI Symbol",
+                    18
+                ],
+                "width": 2
+            },
+            "←": {
+                "font": [
+                    "楷体",
+                    18
+                ],
+                "bg": "#F3F3F3"
+            },
+            "√": {
+                "font": [
+                    "微软雅黑",
+                    20
+                ],
+                "fg": "#1AAE1A",
+                "enter_fg": "#1EC71E"
+            },
+            "×": {
+                "font": [
+                    "微软雅黑",
+                    20
+                ],
+                "fg": "#ED1C24",
+                "enter_fg": "#FF2323"
+            },
+            "T": {
+                "font": [
+                    "High Tower Text",
+                    22
+                ],
+                "fg": "#00A2E8",
+                "enter_fg": "#00AEFA"
+            },
+            " 📌": {
+                "font": [
+                    "Segoe UI Emoji",
+                    18
+                ],
+                "fg": "#ED1C24",
+                "enter_fg": "#FF2323"
+            },
+            "…": {
+                "font": [
+                    "Segoe UI Emoji",
+                    10
+                ],
+                "bg": "#FFFFFF"
+            }
+        }
+    },
+    "Magnifier": {
+        "tip_bg": {
+            "outline": "#000000",
+            "fill": "#000000"
+        },
+        "tip_characters": {
+            "anchor": "nw",
+            "fill": "#FFFFFF",
+            "font": [
+                "微软雅黑",
+                10
+            ]
+        },
+        "border_rect": {
+            "width": 4,
+            "outline": "#1AAE1A"
+        },
+        "cross_line": {
+            "width": 2,
+            "fill": "#1AAE1A"
+        },
+        "control": {
+            "scale": 8.0,
+            "zoom_area": "14.5"
+        }
+    },
+    "Selection": {
+        "anchor": {
+            "fill": "#1AAE1A",
+            "outline": "#1AAE1A"
+        },
+        "border_rect": {
+            "width": 4,
+            "outline": "#1AAE1A"
+        },
+        "control": {
+            "unselect_alpha": 0.4
+        }
+    },
+    "ShowImageCanvas": {
+        "bg": "#202020"
+    },
+    "NailImageCanvas": {
+        "highlightthickness": 1,
+        "highlightcolor": "#ED1C24",
+        "highlightbackground": "#7F7F7F"
+    },
+    "ButtonMenu": {
+        "tearoff": 0,
+        "font": [
+            "微软雅黑",
+            12
+        ]
+    }
+}

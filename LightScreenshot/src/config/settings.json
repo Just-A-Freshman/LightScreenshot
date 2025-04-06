@@ -1,0 +1,28 @@
+{
+    "capture_shortcuts": [
+        "Alt",
+        "Z"
+    ],
+    "call_shortcuts": [
+        "Alt",
+        "Q"
+    ],
+    "nail_shortcuts": [
+        "Alt",
+        "Shift"
+    ],
+    "auto_copy": true,
+    "auto_save": false,
+    "auto_conceal": false,
+    "auto_clear": true,
+    "auto_save_path": "src/image/default",
+    "ocr_config": {
+        "parser_keys": {
+            "text": "text",
+            "box": "box",
+            "rate": "rate"
+        },
+        "command": "_internal\\wcocr.exe --image_path=$image_path"
+    },
+    "edit_exe_path": "C:\\Program Files\\WindowsApps\\Microsoft.Paint_11.2408.30.0_x64__8wekyb3d8bbwe\\PaintApp\\mspaint.exe"
+}
